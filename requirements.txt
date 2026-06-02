@@ -4,7 +4,4 @@ PyJWT==2.8.0
 Werkzeug==3.0.3
 python-dotenv==1.0.1
 Flask-CORS==4.0.1
-<<<<<<< HEAD
 gunicorn==22.0.0
-=======
->>>>>>> b24606938894f1503eb8a3545deac18dbb8668ed
