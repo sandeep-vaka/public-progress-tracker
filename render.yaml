@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: public-progress-tracker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
+    healthCheckPath: /
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: progress_tracker_db
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: PROJECT_NAME
+        value: Public Progress Tracker
+      - key: TEAM_NAME
+        sync: false
+      - key: HACKATHON_NAME
+        sync: false
+      - key: GITHUB_URL
+        sync: false
+      - key: END_DATE
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.0"

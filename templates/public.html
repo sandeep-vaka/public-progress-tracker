@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Progress Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & tokens ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #070d1a;
+      --bg2:         #0c1526;
+      --surface:     #101e35;
+      --surface2:    #162540;
+      --border:      rgba(255,255,255,.08);
+      --border-hi:   rgba(0,240,255,.3);
+      --text:        #e8edf5;
+      --muted:       #5a7090;
+      --dim:         #2a3f5c;
+
+      --cyan:        #00f0ff;
+      --cyan-glow:   rgba(0,240,255,.18);
+      --cyan-dim:    rgba(0,240,255,.08);
+
+      --planned:     #4a9eff;
+      --in-progress: #ffc55a;
+      --done:        #00e676;
+      --blocked:     #ff5252;
+
+      --backend:    #b06eff;
+      --frontend:   #00e5ff;
+      --database:   #ff9100;
+      --auth:       #ff6ec7;
+      --deployment: #69ff47;
+      --other:      #607d8b;
+
+      --mono:  'JetBrains Mono', monospace;
+      --sans:  'DM Sans', sans-serif;
+
+      --radius: 10px;
+      --transition: 180ms cubic-bezier(.4,0,.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      min-height: 100vh;
+      /* Dot-grid background */
+      background-image:
+        radial-gradient(circle at 20% 10%, rgba(0,240,255,.04) 0%, transparent 60%),
+        radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px;
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(7,13,26,.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      max-width: 1180px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: 0.9rem 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .logo-block {}
+    .logo-name {
+      font-family: var(--mono);
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+    .logo-name span { color: var(--cyan); }
+
+    .logo-sub {
+      font-size: 0.72rem; color: var(--muted);
+      font-family: var(--mono);
+      margin-top: 2px;
+    }
+
+    .header-right { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+
+    .team-chip {
+      font-size: 0.72rem; font-family: var(--mono);
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .28rem .85rem;
+      white-space: nowrap;
+    }
+
+    .github-btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+      color: var(--bg);
+      background: var(--cyan);
+      padding: .35rem 1rem;
+      border-radius: 99px;
+      text-decoration: none;
+      transition: opacity var(--transition);
+      white-space: nowrap;
+    }
+    .github-btn:hover { opacity: .85; }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    .main {
+      max-width: 1180px; margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .14em;
+      color: var(--muted);
+      margin-bottom: .9rem;
+    }
+
+    /* ── Meta bar ─────────────────────────────────────────────────────────── */
+    .meta-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: .8rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .meta-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp .5s both;
+    }
+    .meta-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--cyan-dim) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .meta-card-label {
+      font-family: var(--mono);
+      font-size: 0.63rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: .55rem;
+    }
+    .meta-card-val {
+      font-family: var(--mono);
+      font-size: 1.9rem; font-weight: 700;
+      line-height: 1;
+      color: var(--cyan);
+      letter-spacing: -.03em;
+    }
+    .meta-card-unit {
+      font-size: .75rem; font-weight: 400;
+      color: var(--muted);
+      margin-left: .25rem;
+    }
+
+    /* ── Status cards ─────────────────────────────────────────────────────── */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: .8rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .status-grid { grid-template-columns: repeat(2,1fr); }
+    }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      border-top: 2px solid var(--c);
+      animation: fadeUp .5s both;
+    }
+    .status-card:nth-child(2) { animation-delay: .06s; }
+    .status-card:nth-child(3) { animation-delay: .12s; }
+    .status-card:nth-child(4) { animation-delay: .18s; }
+
+    .sc-label {
+      font-family: var(--mono);
+      font-size: .63rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--c);
+      margin-bottom: .5rem;
+    }
+    .sc-val {
+      font-family: var(--mono);
+      font-size: 2.4rem; font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    /* ── Progress section ─────────────────────────────────────────────────── */
+    .progress-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 2.5rem;
+      animation: fadeUp .5s .15s both;
+    }
+
+    .progress-top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: .9rem;
+    }
+    .progress-title {
+      font-family: var(--sans); font-size: .9rem; font-weight: 600;
+    }
+    .progress-pct {
+      font-family: var(--mono); font-size: 1.5rem; font-weight: 700;
+      color: var(--done);
+      letter-spacing: -.03em;
+    }
+
+    .track {
+      height: 8px;
+      background: var(--bg2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--cyan) 0%, var(--done) 100%);
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+      position: relative;
+    }
+    .fill::after {
+      content: '';
+      position: absolute; top: 0; right: 0; bottom: 0; width: 40px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.3));
+      animation: shimmer 2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%,100% { opacity: 0; } 50% { opacity: 1; }
+    }
+
+    /* ── Category bars ────────────────────────────────────────────────────── */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+      gap: .7rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .cat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      animation: fadeUp .5s both;
+    }
+
+    .cat-top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: .6rem;
+    }
+    .cat-name {
+      font-family: var(--mono); font-size: .75rem; font-weight: 700;
+      text-transform: capitalize;
+      color: var(--cc);
+    }
+    .cat-count {
+      font-family: var(--mono); font-size: .75rem; color: var(--muted);
+    }
+    .cat-track {
+      height: 5px;
+      background: var(--bg2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .cat-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--cc);
+      transition: width 1s cubic-bezier(.22,1,.36,1);
+    }
+
+    /* ── Filters ──────────────────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .filter-divider {
+      width: 1px; height: 20px; background: var(--dim); flex-shrink: 0;
+    }
+    .fb {
+      font-family: var(--mono); font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .3rem .85rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .fb:hover { border-color: var(--cyan); color: var(--text); }
+    .fb.active {
+      background: var(--cyan-glow);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* ── Feed ─────────────────────────────────────────────────────────────── */
+    .feed { display: flex; flex-direction: column; gap: .85rem; }
+
+    .update-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--sc);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      transition: border-color var(--transition), transform var(--transition);
+      animation: fadeUp .45s both;
+    }
+    .update-card:hover {
+      border-color: var(--border-hi);
+      transform: translateY(-1px);
+    }
+    .update-card.is-pinned {
+      border-left-color: var(--in-progress);
+      background: rgba(255,197,90,.04);
+    }
+
+    .uc-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 1rem; margin-bottom: .55rem;
+    }
+    .uc-title {
+      font-size: .95rem; font-weight: 600;
+      line-height: 1.4; color: var(--text);
+    }
+    .pin-icon { font-size: .85rem; flex-shrink: 0; margin-top: 1px; }
+
+    .uc-desc {
+      font-size: .845rem; color: var(--muted);
+      line-height: 1.65; margin-bottom: .75rem;
+    }
+
+    .uc-footer {
+      display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    .badge {
+      font-family: var(--mono);
+      font-size: .62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .09em;
+      padding: .22rem .7rem;
+      border-radius: 99px;
+    }
+    .bs-planned    { background: rgba(74,158,255,.12);  color: var(--planned); }
+    .bs-in-progress{ background: rgba(255,197,90,.12);  color: var(--in-progress); }
+    .bs-done       { background: rgba(0,230,118,.12);   color: var(--done); }
+    .bs-blocked    { background: rgba(255,82,82,.12);   color: var(--blocked); }
+
+    .bc-backend    { background: rgba(176,110,255,.1);  color: var(--backend); }
+    .bc-frontend   { background: rgba(0,229,255,.1);    color: var(--frontend); }
+    .bc-database   { background: rgba(255,145,0,.1);    color: var(--database); }
+    .bc-auth       { background: rgba(255,110,199,.1);  color: var(--auth); }
+    .bc-deployment { background: rgba(105,255,71,.1);   color: var(--deployment); }
+    .bc-other      { background: rgba(96,125,139,.1);   color: var(--other); }
+
+    .uc-date {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: .65rem; color: var(--dim);
+    }
+
+    /* ── Empty / loading ──────────────────────────────────────────────────── */
+    .state-box {
+      text-align: center; padding: 4rem 2rem;
+      color: var(--muted);
+      font-family: var(--mono); font-size: .85rem;
+    }
+    .state-icon { font-size: 2.5rem; margin-bottom: .9rem; opacity: .6; }
+
+    .spinner-wrap { display: flex; align-items: center; justify-content: center; gap: .75rem; }
+    .spinner {
+      width: 22px; height: 22px;
+      border: 2px solid var(--dim);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ───────────────────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 1.8rem;
+      font-family: var(--mono); font-size: .65rem;
+      color: var(--dim);
+      border-top: 1px solid var(--border);
+      margin-top: 5rem;
+      letter-spacing: .08em;
+    }
+
+    /* ── Animations ───────────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Refresh btn ──────────────────────────────────────────────────────── */
+    .refresh-btn {
+      font-family: var(--mono); font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .28rem .85rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .refresh-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .meta-row { grid-template-columns: repeat(2,1fr); }
+      .header-inner { padding: .8rem 1rem; }
+      .main { padding: 1.5rem 1rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo-name"><span id="hProjectName">Progress</span>&nbsp;Tracker</div>
+      <div class="logo-sub" id="hHackathon">Loading…</div>
+    </div>
+    <div class="header-right">
+      <span class="team-chip" id="hTeam">Team —</span>
+      <a class="github-btn" id="hGithub" href="#" target="_blank" rel="noopener">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.489.5.09.682-.217.682-.482
+                   0-.237-.009-.868-.013-1.703-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463
+                   -1.11-1.463-.907-.619.069-.607.069-.607 1.003.07 1.531 1.031 1.531 1.031.892 1.528
+                   2.341 1.087 2.91.831.092-.647.35-1.087.636-1.338-2.22-.252-4.555-1.111-4.555-4.943
+                   0-1.091.39-1.984 1.03-2.682-.104-.253-.447-1.27.098-2.646 0 0 .84-.269 2.75 1.025
+                   A9.58 9.58 0 0112 6.836c.85.004 1.705.115 2.504.337 1.908-1.294 2.747-1.025
+                   2.747-1.025.546 1.376.202 2.393.1 2.646.64.698 1.028 1.59 1.028 2.682 0 3.841
+                   -2.337 4.687-4.565 4.935.36.308.678.919.678 1.852 0 1.336-.012 2.415-.012 2.742
+                   0 .267.18.577.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Meta cards: streak / days-remaining / completion / total -->
+  <div class="section-label">// project pulse</div>
+  <div class="meta-row" id="metaRow">
+    <div class="meta-card">
+      <div class="meta-card-label">🔥 Streak</div>
+      <div class="meta-card-val"><span id="metaStreak">—</span><span class="meta-card-unit">days</span></div>
+    </div>
+    <div class="meta-card" style="animation-delay:.07s">
+      <div class="meta-card-label">⏳ Remaining</div>
+      <div class="meta-card-val"><span id="metaDays">—</span><span class="meta-card-unit">days</span></div>
+    </div>
+    <div class="meta-card" style="animation-delay:.14s">
+      <div class="meta-card-label">✅ Complete</div>
+      <div class="meta-card-val"><span id="metaPct">—</span><span class="meta-card-unit">%</span></div>
+    </div>
+    <div class="meta-card" style="animation-delay:.21s">
+      <div class="meta-card-label">📦 Updates</div>
+      <div class="meta-card-val"><span id="metaTotal">—</span></div>
+    </div>
+  </div>
+
+  <!-- Status breakdown -->
+  <div class="section-label">// status breakdown</div>
+  <div class="status-grid">
+    <div class="status-card" style="--c:var(--planned)">
+      <div class="sc-label">Planned</div>
+      <div class="sc-val" id="scPlanned">—</div>
+    </div>
+    <div class="status-card" style="--c:var(--in-progress)">
+      <div class="sc-label">In Progress</div>
+      <div class="sc-val" id="scInProgress">—</div>
+    </div>
+    <div class="status-card" style="--c:var(--done)">
+      <div class="sc-label">Done</div>
+      <div class="sc-val" id="scDone">—</div>
+    </div>
+    <div class="status-card" style="--c:var(--blocked)">
+      <div class="sc-label">Blocked</div>
+      <div class="sc-val" id="scBlocked">—</div>
+    </div>
+  </div>
+
+  <!-- Overall progress -->
+  <div class="section-label">// overall progress</div>
+  <div class="progress-section">
+    <div class="progress-top">
+      <span class="progress-title">Tasks Completed</span>
+      <span class="progress-pct" id="progPct">0%</span>
+    </div>
+    <div class="track"><div class="fill" id="progFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Category bars -->
+  <div class="section-label">// by category</div>
+  <div class="cat-grid" id="catGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Feed header + filters -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.7rem;margin-bottom:.9rem;">
+    <div class="section-label" style="margin:0">// update feed</div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ refresh</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar" id="filterBar">
+    <!-- Status -->
+    <button class="fb active" data-type="status" data-val="">all</button>
+    <button class="fb" data-type="status" data-val="planned">planned</button>
+    <button class="fb" data-type="status" data-val="in-progress">in-progress</button>
+    <button class="fb" data-type="status" data-val="done">done</button>
+    <button class="fb" data-type="status" data-val="blocked">blocked</button>
+    <div class="filter-divider"></div>
+    <!-- Category -->
+    <button class="fb active" data-type="category" data-val="">all</button>
+    <button class="fb" data-type="category" data-val="backend">backend</button>
+    <button class="fb" data-type="category" data-val="frontend">frontend</button>
+    <button class="fb" data-type="category" data-val="database">database</button>
+    <button class="fb" data-type="category" data-val="auth">auth</button>
+    <button class="fb" data-type="category" data-val="deployment">deploy</button>
+    <button class="fb" data-type="category" data-val="other">other</button>
+  </div>
+
+  <!-- Updates container -->
+  <div id="updatesWrap">
+    <div class="state-box">
+      <div class="spinner-wrap"><div class="spinner"></div> loading updates…</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────────── -->
+<footer class="footer" id="footer">
+  PUBLIC PROGRESS TRACKER · SMART INDIA HACKATHON 2025
+</footer>
+
+<script>
+  /* ─────────────────────────────────────────────────────────────────────────
+     Config & state
+  ───────────────────────────────────────────────────────────────────────── */
+  const API = '';                  // same-origin — served by Flask
+  let activeStatus   = '';
+  let activeCategory = '';
+
+  const CAT_COLOR = {
+    backend:    'var(--backend)',
+    frontend:   'var(--frontend)',
+    database:   'var(--database)',
+    auth:       'var(--auth)',
+    deployment: 'var(--deployment)',
+    other:      'var(--other)',
+  };
+
+  const STATUS_COLOR = {
+    'planned':     'var(--planned)',
+    'in-progress': 'var(--in-progress)',
+    'done':        'var(--done)',
+    'blocked':     'var(--blocked)',
+  };
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Utilities
+  ───────────────────────────────────────────────────────────────────────── */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  /* Count-up animation */
+  function countUp(el, target, suffix='', dur=900) {
+    const start = performance.now();
+    const isFloat = String(target).includes('.');
+    const num = parseFloat(target);
+    function step(now) {
+      const t = Math.min((now - start) / dur, 1);
+      const ease = t < .5 ? 2*t*t : -1+(4-2*t)*t;
+      const cur = num * ease;
+      el.textContent = isFloat ? cur.toFixed(1) + suffix : Math.round(cur) + suffix;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Load meta (project name, team, hackathon, github)
+  ───────────────────────────────────────────────────────────────────────── */
+  async function loadMeta() {
+    try {
+      const r = await fetch(`${API}/meta`);
+      const d = await r.json();
+      const proj = d.project_name || 'Progress Tracker';
+      document.getElementById('hProjectName').textContent = proj;
+      document.getElementById('hHackathon').textContent   = d.hackathon_name || '';
+      document.getElementById('hTeam').textContent        = d.team_name ? `👥 ${d.team_name}` : '';
+      document.title = `${proj} — Tracker`;
+      const gh = document.getElementById('hGithub');
+      if (d.github_url) { gh.href = d.github_url; }
+      else              { gh.style.display = 'none'; }
+      document.getElementById('footer').textContent =
+        `${proj.toUpperCase()} · ${(d.team_name||'').toUpperCase()} · ${(d.hackathon_name||'').toUpperCase()}`;
+    } catch(e) { console.error('meta', e); }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Load stats
+  ───────────────────────────────────────────────────────────────────────── */
+  async function loadStats() {
+    try {
+      const r = await fetch(`${API}/stats`);
+      const d = await r.json();
+
+      countUp(document.getElementById('metaStreak'), d.current_streak);
+      countUp(document.getElementById('metaDays'),   d.days_remaining);
+      countUp(document.getElementById('metaPct'),    d.completion_percentage, '', 1100);
+      countUp(document.getElementById('metaTotal'),  d.total);
+
+      countUp(document.getElementById('scPlanned'),    d.status_counts.planned);
+      countUp(document.getElementById('scInProgress'), d.status_counts['in-progress']);
+      countUp(document.getElementById('scDone'),       d.status_counts.done);
+      countUp(document.getElementById('scBlocked'),    d.status_counts.blocked);
+
+      const pct = Math.min(100, Math.max(0, d.completion_percentage));
+      document.getElementById('progPct').textContent   = pct.toFixed(1) + '%';
+      document.getElementById('progFill').style.width  = pct + '%';
+
+      // Category bars
+      const grid   = document.getElementById('catGrid');
+      const cats   = d.category_counts;
+      const maxVal = Math.max(1, ...Object.values(cats));
+      let delay    = 0;
+      grid.innerHTML = Object.entries(cats).map(([name, cnt]) => {
+        const col   = CAT_COLOR[name] || 'var(--other)';
+        const barW  = Math.round(cnt / maxVal * 100);
+        const html  = `
+          <div class="cat-card" style="--cc:${col};animation-delay:${(delay+=60)}ms">
+            <div class="cat-top">
+              <span class="cat-name">${esc(name)}</span>
+              <span class="cat-count">${cnt}</span>
+            </div>
+            <div class="cat-track">
+              <div class="cat-fill" style="width:0%;background:${col}"
+                   data-target="${barW}"></div>
+            </div>
+          </div>`;
+        return html;
+      }).join('');
+
+      // Animate category bars after a tick
+      setTimeout(() => {
+        document.querySelectorAll('.cat-fill[data-target]').forEach(el => {
+          el.style.width = el.dataset.target + '%';
+        });
+      }, 80);
+
+    } catch(e) { console.error('stats', e); }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Load updates
+  ───────────────────────────────────────────────────────────────────────── */
+  async function loadUpdates() {
+    const wrap = document.getElementById('updatesWrap');
+    wrap.innerHTML = '<div class="state-box"><div class="spinner-wrap"><div class="spinner"></div> loading…</div></div>';
+
+    const p = new URLSearchParams();
+    if (activeStatus)   p.set('status',   activeStatus);
+    if (activeCategory) p.set('category', activeCategory);
+
+    try {
+      const r = await fetch(`${API}/updates?${p}`);
+      const d = await r.json();
+
+      if (!d.updates || d.updates.length === 0) {
+        wrap.innerHTML = `<div class="state-box"><div class="state-icon">📭</div>No updates match your filters.</div>`;
+        return;
+      }
+
+      const cards = d.updates.map((u, i) => renderCard(u, i)).join('');
+      wrap.innerHTML = `<div class="feed">${cards}</div>`;
+    } catch(e) {
+      wrap.innerHTML = `<div class="state-box"><div class="state-icon">⚠️</div>Could not load updates.</div>`;
+      console.error('updates', e);
+    }
+  }
+
+  function renderCard(u, i) {
+    const sc        = STATUS_COLOR[u.status] || 'var(--muted)';
+    const pinnedCls = u.pinned ? ' is-pinned' : '';
+    const pinHtml   = u.pinned ? '<span class="pin-icon">📌</span>' : '';
+    const statusCls = 'badge bs-' + u.status;
+    const catCls    = 'badge bc-' + u.category;
+    const desc      = u.description
+      ? `<p class="uc-desc">${esc(u.description)}</p>` : '';
+
+    return `
+      <div class="update-card${pinnedCls}" style="--sc:${sc};animation-delay:${i*40}ms">
+        <div class="uc-top">
+          <h3 class="uc-title">${esc(u.title)}</h3>
+          ${pinHtml}
+        </div>
+        ${desc}
+        <div class="uc-footer">
+          <span class="${statusCls}">${esc(u.status)}</span>
+          <span class="${catCls}">${esc(u.category)}</span>
+          <span class="uc-date">${fmtDate(u.created_at)}</span>
+        </div>
+      </div>`;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Filter logic
+  ───────────────────────────────────────────────────────────────────────── */
+  document.querySelectorAll('.fb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      const val  = btn.dataset.val;
+
+      document.querySelectorAll(`.fb[data-type="${type}"]`)
+              .forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (type === 'status')   activeStatus   = val;
+      if (type === 'category') activeCategory = val;
+
+      loadUpdates();
+    });
+  });
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Bootstrap
+  ───────────────────────────────────────────────────────────────────────── */
+  async function loadAll() {
+    const btn = document.getElementById('refreshBtn');
+    if (btn) { btn.textContent = '↻ refreshing…'; btn.disabled = true; }
+    await Promise.all([loadMeta(), loadStats(), loadUpdates()]);
+    if (btn) { btn.textContent = '↻ refresh'; btn.disabled = false; }
+  }
+
+  loadAll();
+</script>
+</body>
+</html>
