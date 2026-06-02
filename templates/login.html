@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h2>Welcome Back</h2>
+    <div class="alert success" id="ok"></div>
+    <div class="alert error" id="err"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@example.com" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Your password" />
+    </div>
+    <button class="btn" onclick="doLogin()">Login</button>
+    <p class="form-footer">No account? <a href="/signup">Sign Up</a></p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const params = new URLSearchParams(location.search);
+  if (params.get("registered")) {
+    const ok = document.getElementById("ok");
+    ok.textContent = "Account created! Please login.";
+    ok.style.display = "block";
+  }
+  if (getUser()) window.location.href = "/dashboard";
+
+  async function doLogin() {
+    const err = document.getElementById("err");
+    err.style.display = "none";
+    try {
+      const data = await api.login({
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value,
+      });
+      setToken(data.token);
+      setUser(data.user);
+      window.location.href = "/dashboard";
+    } catch(e) {
+      err.textContent = e.message;
+      err.style.display = "block";
+    }
+  }
+  document.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+</script>
+{% endblock %}
