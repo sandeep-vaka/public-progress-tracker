@@ -1,5 +1,6 @@
 Flask==3.0.3
-mongoengine==0.28.2
+mongoengine>=0.29.1
+pymongo>=4.9
 PyJWT==2.8.0
 Werkzeug==3.0.3
 python-dotenv==1.0.1
